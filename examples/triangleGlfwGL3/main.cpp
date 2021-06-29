@@ -58,7 +58,6 @@
 #endif
 
 using namespace std;
-using namespace date;
 using namespace fmt;
 //}}}
 
@@ -186,7 +185,7 @@ static void shutdown() {
 //{{{
 static bool pollEvents() {
 
-  if (glfwWindowShouldClose (gWindow)) 
+  if (glfwWindowShouldClose (gWindow))
     return false;
   else {
     glfwPollEvents();
@@ -401,7 +400,7 @@ public:
         sscanf (gl_version, "%d.%d", &major, &minor);
       gGlVersion = (GLuint)(major * 100 + minor * 10);
 
-      cLog::log (LOGINFO, format ("GL version {} {}", gl_version, gGlVersion));
+      cLog::log (LOGINFO, format ("OpenGL version {} {}", gl_version, gGlVersion));
     #endif
 
     // Setup backend capabilities flags
@@ -412,8 +411,21 @@ public:
       if (gGlVersion >= 320) {
         // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
         io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
-        cLog::log (LOGINFO, format ("GL version {} {}", gl_version, gGlVersion));
+        cLog::log (LOGINFO, "- has vtxOffset");
         }
+    #endif
+
+    gHasClipOrigin = gGlVersion >= 450;
+    #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_EXTENSIONS
+      GLint num_extensions = 0;
+      glGetIntegerv (GL_NUM_EXTENSIONS, &num_extensions);
+      for (GLint i = 0; i < num_extensions; i++) {
+        const char* extension = (const char*)glGetStringi (GL_EXTENSIONS, i);
+        if (extension != NULL && strcmp (extension, "GL_ARB_clip_control") == 0) {
+          gHasClipOrigin = true;
+          cLog::log (LOGINFO, "- has clipOrigin");
+          }
+      }
     #endif
 
     // Store GLSL version string so we can refer to it later in case we recreate shaders.
@@ -432,7 +444,6 @@ public:
     IM_ASSERT ((int)strlen (glsl_version) + 2 < IM_ARRAYSIZE (gGlslVersionString));
     strcpy (gGlslVersionString, glsl_version);
     strcat (gGlslVersionString, "\n");
-
     cLog::log (LOGINFO, "GLSL version " + string (glsl_version));
 
     // Debugging construct to make it easily visible in the IDE and debugger which GL loader has been selected.
@@ -449,19 +460,6 @@ public:
     // Desktop OpenGL 3/4 need a function loader. See the IMGUI_IMPL_OPENGL_LOADER_xxx explanation above.
     GLint current_texture;
     glGetIntegerv (GL_TEXTURE_BINDING_2D, &current_texture);
-
-    // Detect extensions we support
-    gHasClipOrigin = gGlVersion >= 450;
-
-    #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_EXTENSIONS
-      GLint num_extensions = 0;
-      glGetIntegerv (GL_NUM_EXTENSIONS, &num_extensions);
-      for (GLint i = 0; i < num_extensions; i++) {
-        const char* extension = (const char*)glGetStringi (GL_EXTENSIONS, i);
-        if (extension != NULL && strcmp (extension, "GL_ARB_clip_control") == 0)
-          gHasClipOrigin = true;
-      }
-    #endif
 
     return true;
     }
