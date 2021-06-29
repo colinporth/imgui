@@ -179,6 +179,8 @@ static void shutdown() {
     }
 
   glfwDestroyWindow (gWindow);
+
+  glfwTerminate();
   }
 //}}}
 
@@ -1413,7 +1415,6 @@ int main (int, char **) {
   graphics.shutdown();
   platform.shutdown();
   ImGui::DestroyContext();
-  glfwTerminate();
 
   return 0;
   }
