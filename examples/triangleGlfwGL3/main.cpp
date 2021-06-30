@@ -57,6 +57,7 @@
   #define GLFW_HAS_NEW_CURSORS   (0)
 #endif
 
+// using namespace
 using namespace std;
 using namespace fmt;
 //}}}
@@ -202,17 +203,17 @@ static void newFrame() {
   IM_ASSERT(io.Fonts->IsBuilt() && "Font atlas not built! It is generally built by the renderer backend");
 
   // Setup display size (every frame to accommodate for window resizing)
-  int w;
-  int h;
-  int display_w;
-  int display_h;
+  int width;
+  int height;
+  glfwGetWindowSize (gWindow, &width, &height);
 
-  glfwGetWindowSize (gWindow, &w, &h);
-  glfwGetFramebufferSize (gWindow, &display_w, &display_h);
+  int displayWidth;
+  int displayHeight;
+  glfwGetFramebufferSize (gWindow, &displayWidth, &displayHeight);
 
-  io.DisplaySize = ImVec2 ((float)w, (float)h);
-  if (w > 0 && h > 0)
-    io.DisplayFramebufferScale = ImVec2 ((float)display_w / w, (float)display_h / h);
+  io.DisplaySize = ImVec2 ((float)width, (float)height);
+  if ((width > 0) && (height > 0))
+    io.DisplayFramebufferScale = ImVec2 ((float)displayWidth / width, (float)displayHeight / height);
 
   // Setup time step
   double current_time = glfwGetTime();
@@ -420,12 +421,12 @@ public:
       GLint num_extensions = 0;
       glGetIntegerv (GL_NUM_EXTENSIONS, &num_extensions);
       for (GLint i = 0; i < num_extensions; i++) {
-        const char* extension = (const char*)glGetStringi (GL_EXTENSIONS, i);
-        if (extension != NULL && strcmp (extension, "GL_ARB_clip_control") == 0) {
+        auto extension = (const char*)glGetStringi (GL_EXTENSIONS, i);
+        if ((extension != NULL) && strcmp (extension, "GL_ARB_clip_control") == 0) {
           gHasClipOrigin = true;
           cLog::log (LOGINFO, "- has clipOrigin");
           }
-      }
+        }
     #endif
 
     // glsl versionString, number
@@ -440,15 +441,6 @@ public:
       mGlslVersion = 130;
     #endif
     cLog::log (LOGINFO, format ("GLSL {}", mGlslVersion));
-
-    // Debugging construct to make it easily visible in the IDE and debugger which GL loader has been selected.
-    // The code actually never uses the 'gl_loader' variable! It is only here so you can read it!
-    // If auto-detection fails or doesn't select the same GL loader file as used by your application,
-    // you are likely to get a crash below.
-    // You can explicitly select a loader by using '#define IMGUI_IMPL_OPENGL_LOADER_XXX' in imconfig.h or compiler command-line.
-    const char* gl_loader = "Unknown";
-    IM_UNUSED (gl_loader);
-    gl_loader = "GL3W";
 
     // Make an arbitrary GL call (we don't actually need the result)
     GLint current_texture;
@@ -979,15 +971,6 @@ private:
   //}}}
 
   //{{{
-  const GLchar* fragment_shader_glsl_130 =
-    "uniform sampler2D Texture;\n"
-    "in vec2 Frag_UV;\n"
-    "in vec4 Frag_Color;\n"
-    "out vec4 Out_Color;\n"
-    "void main() {\n"
-    "  Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
-    "  }\n";
-
   const GLchar* vertex_shader_glsl_130 =
     "uniform mat4 ProjMtx;\n"
     "in vec2 Position;\n"
@@ -1000,20 +983,18 @@ private:
     "  Frag_Color = Color;\n"
     "  gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
     "  }\n";
+
+  const GLchar* fragment_shader_glsl_130 =
+    "uniform sampler2D Texture;\n"
+    "in vec2 Frag_UV;\n"
+    "in vec4 Frag_Color;\n"
+    "out vec4 Out_Color;\n"
+    "void main() {\n"
+    "  Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
+    "  }\n";
+
   //}}}
   //{{{
-  const GLchar* fragment_shader_glsl_120 =
-    "#ifdef GL_ES\n"
-    "    precision mediump float;\n"
-    "#endif\n"
-    "uniform sampler2D Texture;\n"
-    "varying vec2 Frag_UV;\n"
-    "varying vec4 Frag_Color;\n"
-    "void main()\n"
-    "{\n"
-    "    gl_FragColor = Frag_Color * texture2D(Texture, Frag_UV.st);\n"
-    "}\n";
-
   const GLchar* vertex_shader_glsl_120 =
     "uniform mat4 ProjMtx;\n"
     "attribute vec2 Position;\n"
@@ -1027,19 +1008,21 @@ private:
     "    Frag_Color = Color;\n"
     "    gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
     "}\n";
-  //}}}
-  //{{{
-  const GLchar* fragment_shader_glsl_300_es =
-    "precision mediump float;\n"
+
+  const GLchar* fragment_shader_glsl_120 =
+    "#ifdef GL_ES\n"
+    "  precision mediump float;\n"
+    "#endif\n"
     "uniform sampler2D Texture;\n"
-    "in vec2 Frag_UV;\n"
-    "in vec4 Frag_Color;\n"
-    "layout (location = 0) out vec4 Out_Color;\n"
+    "varying vec2 Frag_UV;\n"
+    "varying vec4 Frag_Color;\n"
     "void main()\n"
     "{\n"
-    "    Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
+    "    gl_FragColor = Frag_Color * texture2D(Texture, Frag_UV.st);\n"
     "}\n";
 
+  //}}}
+  //{{{
   const GLchar* vertex_shader_glsl_300_es =
     "precision mediump float;\n"
     "layout (location = 0) in vec2 Position;\n"
@@ -1048,24 +1031,23 @@ private:
     "uniform mat4 ProjMtx;\n"
     "out vec2 Frag_UV;\n"
     "out vec4 Frag_Color;\n"
-    "void main()\n"
-    "{\n"
-    "    Frag_UV = UV;\n"
-    "    Frag_Color = Color;\n"
-    "    gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
-    "}\n";
-  //}}}
-  //{{{
-  const GLchar* fragment_shader_glsl_410_core =
+    "void main() {\n"
+    "  Frag_UV = UV;\n"
+    "  Frag_Color = Color;\n"
+    "  gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
+    "  }\n";
+
+  const GLchar* fragment_shader_glsl_300_es =
+    "precision mediump float;\n"
+    "uniform sampler2D Texture;\n"
     "in vec2 Frag_UV;\n"
     "in vec4 Frag_Color;\n"
-    "uniform sampler2D Texture;\n"
     "layout (location = 0) out vec4 Out_Color;\n"
-    "void main()\n"
-    "{\n"
-    "    Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
-    "}\n";
-
+    "void main() \n"
+    "  Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
+    "  }\n";
+  //}}}
+  //{{{
   const GLchar* vertex_shader_glsl_410_core =
     "layout (location = 0) in vec2 Position;\n"
     "layout (location = 1) in vec2 UV;\n"
@@ -1073,12 +1055,20 @@ private:
     "uniform mat4 ProjMtx;\n"
     "out vec2 Frag_UV;\n"
     "out vec4 Frag_Color;\n"
-    "void main()\n"
-    "{\n"
-    "    Frag_UV = UV;\n"
-    "    Frag_Color = Color;\n"
-    "    gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
-    "}\n";
+    "void main() {\n"
+    "  Frag_UV = UV;\n"
+    "  Frag_Color = Color;\n"
+    "  gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
+    "  }\n";
+
+  const GLchar* fragment_shader_glsl_410_core =
+    "in vec2 Frag_UV;\n"
+    "in vec4 Frag_Color;\n"
+    "uniform sampler2D Texture;\n"
+    "layout (location = 0) out vec4 Out_Color;\n"
+    "void main() {\n"
+    "  Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
+    "  }\n";
   //}}}
 
   string mGlVersionString;
@@ -1258,12 +1248,12 @@ public:
 
     glGenBuffers (1, &vbo);
     glBindBuffer (GL_ARRAY_BUFFER, vbo);
-    glBufferData (GL_ARRAY_BUFFER, sizeof(triangleVertices), triangleVertices, GL_STATIC_DRAW);
+    glBufferData (GL_ARRAY_BUFFER, sizeof(kTriangleVertices), kTriangleVertices, GL_STATIC_DRAW);
     cLog::log (LOGINFO, format ("vbo {}", vbo));
 
     glGenBuffers (1, &ebo);
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, ebo);
-    glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof(triangleIndices), triangleIndices, GL_STATIC_DRAW);
+    glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof(kTriangleIndices), kTriangleIndices, GL_STATIC_DRAW);
     cLog::log (LOGINFO, format ("ebo {}", ebo));
 
     glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
@@ -1276,11 +1266,12 @@ public:
 
     glBindVertexArray (0);
 
-    shader.init (cFileManager::read ("vert.txt"), cFileManager::read ("frag.txt"));
+    //shader.init (cFileManager::read ("vert.txt"), cFileManager::read ("frag.txt"));
+    shader.init (kVertShader, kFragShader);
     }
 
-  void setRotation (float rotation) { shader.setUniform ("rotation", rotation); }
-  void setTranslation (float translation[]) { shader.setUniform ("translation", translation[0], translation[1]); }
+  void setRotate (float angle) { shader.setUniform ("angle", angle); }
+  void setOffset (float offset[]) { shader.setUniform ("offset", offset[0], offset[1]); }
   void setColor (float color[]) { shader.setUniform ("color", color[0], color[1], color[2]); }
 
   void draw() {
@@ -1291,11 +1282,39 @@ public:
     }
 
 private:
-  const float triangleVertices[18] = { 0.0f,   0.25f, 0.0f, 1.0f, 0.0f, 0.0f,     // vertex 1
-                                       0.25f, -0.25f, 0.0f, 0.0f, 1.0f, 0.0f,     // vertex 2
-                                      -0.25f, -0.25f, 0.0f, 0.0f, 0.0f, 1.0f,     // vertex 3
-                                    };
-  const unsigned triangleIndices[3] = { 0, 1, 2 };
+  const float kTriangleVertices[18] = { 0.0f,   0.25f, 0.0f,  1.0f, 0.0f, 0.0f, // vertex 1 red
+                                        0.25f, -0.25f, 0.0f,  0.0f, 1.0f, 0.0f, // vertex 2 green
+                                       -0.25f, -0.25f, 0.0f,  0.0f, 0.0f, 1.0f, // vertex 3 blue
+                                      };
+  const unsigned kTriangleIndices[3] = { 0, 1, 2 };
+
+  //{{{  shaders
+  const GLchar* kVertShader =
+    "#version 330 core\n"
+    "uniform float angle;"
+    "uniform vec2 offset;"
+    "layout (location = 0) in vec3 pos;"
+    "layout (location = 1) in vec3 color;"
+    "out vec3 vertexColor;\n"
+    "void main() {"
+    "  vec2 rotated_pos;"
+    "  rotated_pos.x = offset.x + (pos.x * cos(angle)) - (pos.y * sin(angle));"
+    "  rotated_pos.y = offset.y + (pos.x * sin(angle)) + (pos.y * cos(angle));"
+    "  gl_Position = vec4 (rotated_pos.x, rotated_pos.y, pos.z, 1.0);"
+    "  vertexColor = color;"
+    "  }"
+    "\n";
+
+  const GLchar* kFragShader =
+    "#version 330 core\n"
+    "uniform vec3 color;"
+    "in vec3 vertexColor;"
+    "out vec4 FragColor;"
+    "void main() {"
+    "  FragColor = vec4 (color * vertexColor, 1.0);"
+    "  }"
+    "\n";
+  //}}}
 
   unsigned vbo;
   unsigned vao;
@@ -1305,9 +1324,9 @@ private:
   };
 //}}}
 
-const float kPi = 3.14159265f;
-float rotation = 0.0;
-float translation[] = {0.0, 0.0};
+constexpr float kPi = 3.14159265f;
+float angle = 0.0;
+float offset[] = {0.0, 0.0};
 float color[4] = { 1.0f,1.0f,1.0f,1.0f };
 
 //{{{
@@ -1380,25 +1399,24 @@ int main (int, char **) {
     platform.newFrame();
     ImGui::NewFrame();
 
-    // render triangle
     triangle.draw();
 
-    // gui drawlist
+    // gui
     ImGui::Begin ("Triangle");
-    ImGui::SliderFloat ("rotation", &rotation, 0, 2.0f * kPi);
-    triangle.setRotation (rotation);
-    ImGui::SliderFloat2 ("position", translation, -1.0, 1.0);
-    triangle.setTranslation (translation);
+    ImGui::SliderFloat ("angle", &angle, 0, 2.0f * kPi);
+    triangle.setRotate (angle);
+    ImGui::SliderFloat2 ("position", offset, -1.0, 1.0);
+    triangle.setOffset (offset);
     ImGui::ColorEdit3 ("color", color);
     triangle.setColor (color);
     ImGui::End();
 
-    // logo drawlist
+    // logo
     ImGui::Begin ("logo");
     addLogo();
     ImGui::End();
 
-    // render imgui
+    // imgui
     ImGui::Render();
     graphics.draw (ImGui::GetDrawData());
 
