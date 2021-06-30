@@ -389,34 +389,41 @@ public:
     glViewport (0, 0, width, height);
 
     // Query for GL version (e.g. 320 for GL 3.2)
+    const char* glVersion = (const char*)glGetString (GL_VERSION);
     #if defined(IMGUI_IMPL_OPENGL_ES2)
-      gGlVersion = 200; // GLES 2
-      cLog::log (LOGINFO, "GLES version 2");
+      mGlVersionNum = 200; // GLES 2
+      cLog::log (LOGINFO, "forcing openGLES version 2");
     #else
-      const char* gl_version = (const char*)glGetString (GL_VERSION);
       GLint major = 0;
-      GLint minor = 0;
       glGetIntegerv (GL_MAJOR_VERSION, &major);
+      GLint minor = 0;
       glGetIntegerv (GL_MINOR_VERSION, &minor);
       if (major == 0 && minor == 0)
-        sscanf (gl_version, "%d.%d", &major, &minor);
-      mGlVersion = (GLuint)(major * 100 + minor * 10);
-      cLog::log (LOGINFO, format ("OpenGL version {} {}", gl_version, mGlVersion));
+        sscanf (glVersion, "%d.%d", &major, &minor);
+      mGlVersionNum = (GLuint)(major * 100 + minor * 10);
     #endif
+
+    cLog::log (LOGINFO, format ("OpenGL version {} parsed as {}", glVersion, mGlVersionNum));
+    string glslVersion = (const char*)glGetString (GL_SHADING_LANGUAGE_VERSION);
+    cLog::log (LOGINFO, format ("GLSL version {}", glslVersion));
+    string glRenderer = (const char*)glGetString (GL_RENDERER);
+    cLog::log (LOGINFO, format ("Renderer - {}", glRenderer));
+    string glVendor = (const char*)glGetString (GL_VENDOR);
+    cLog::log (LOGINFO, format ("Vendor - {}", glVendor));
 
     // Setup backend capabilities flags
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl";
 
     #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
-      if (mGlVersion >= 320) {
+      if (mGlVersionNum >= 320) {
         // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
         io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
-        cLog::log (LOGINFO, "- has vtxOffset");
+        cLog::log (LOGINFO, "- openGL > 3.2 has vtxOffset");
         }
     #endif
 
-    gHasClipOrigin = mGlVersion >= 450;
+    gHasClipOrigin = mGlVersionNum >= 450;
     #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_EXTENSIONS
       GLint num_extensions = 0;
       glGetIntegerv (GL_NUM_EXTENSIONS, &num_extensions);
@@ -424,7 +431,7 @@ public:
         auto extension = (const char*)glGetStringi (GL_EXTENSIONS, i);
         if ((extension != NULL) && strcmp (extension, "GL_ARB_clip_control") == 0) {
           gHasClipOrigin = true;
-          cLog::log (LOGINFO, "- has clipOrigin");
+          cLog::log (LOGINFO, "- openGL has GL_ARB_clip_control clipOrigin");
           }
         }
     #endif
@@ -432,15 +439,15 @@ public:
     // glsl versionString, number
     #if defined(IMGUI_IMPL_OPENGL_ES2)
       mGlslVersionString = "#version 100\n";
-      mGlslVersion = 100;
+      mGlslVersionNum = 100;
     #elif defined(IMGUI_IMPL_OPENGL_ES3)
       mGlslVersionString = "#version 300 es\n";
-      mGlslVersion = 300;
+      mGlslVersionNum = 300;
     #else
       mGlslVersionString = "#version 130\n";
-      mGlslVersion = 130;
+      mGlslVersionNum = 130;
     #endif
-    cLog::log (LOGINFO, format ("GLSL {}", mGlslVersion));
+    cLog::log (LOGINFO, format ("GLSL using {}", mGlslVersionNum));
 
     // Make an arbitrary GL call (we don't actually need the result)
     GLint current_texture;
@@ -493,7 +500,7 @@ public:
 
     #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
       GLuint last_sampler;
-      if (mGlVersion >= 330)
+      if (mGlVersionNum >= 330)
         glGetIntegerv (GL_SAMPLER_BINDING, (GLint*)&last_sampler);
       else {
         last_sampler = 0;
@@ -544,7 +551,7 @@ public:
     GLboolean last_enable_scissor_test = glIsEnabled (GL_SCISSOR_TEST);
 
     #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_PRIMITIVE_RESTART
-      GLboolean last_enable_primitive_restart = (mGlVersion >= 310) ?
+      GLboolean last_enable_primitive_restart = (mGlVersionNum >= 310) ?
                                                   glIsEnabled (GL_PRIMITIVE_RESTART) : GL_FALSE;
     #endif
 
@@ -599,7 +606,7 @@ public:
             // Bind texture, Draw
             glBindTexture (GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->GetTexID());
             #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
-              if (mGlVersion >= 320)
+              if (mGlVersionNum >= 320)
                 glDrawElementsBaseVertex (GL_TRIANGLES, (GLsizei)pcmd->ElemCount,
                                           sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT,
                                           (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)), (GLint)pcmd->VtxOffset);
@@ -622,7 +629,7 @@ public:
     glUseProgram (last_program);
     glBindTexture (GL_TEXTURE_2D, last_texture);
     #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
-      if (mGlVersion >= 330)
+      if (mGlVersionNum >= 330)
         glBindSampler (0, last_sampler);
     #endif
     glActiveTexture (last_active_texture);
@@ -660,7 +667,7 @@ public:
       glDisable (GL_SCISSOR_TEST);
 
     #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_PRIMITIVE_RESTART
-      if (mGlVersion >= 310) {
+      if (mGlVersionNum >= 310) {
         if (last_enable_primitive_restart)
           glEnable (GL_PRIMITIVE_RESTART);
         else
@@ -782,25 +789,29 @@ private:
     #endif
 
     // Parse GLSL version string
-    mGlslVersion = 130;
-    sscanf (mGlslVersionString.c_str(), "#version %d", &mGlslVersion);
+    mGlslVersionNum = 130;
+    sscanf (mGlslVersionString.c_str(), "#version %d", &mGlslVersionNum);
 
     // Select shaders matching our GLSL versions
     const GLchar* vertex_shader = NULL;
     const GLchar* fragment_shader = NULL;
-    if (mGlslVersion < 130) {
+    if (mGlslVersionNum < 130) {
+      cLog::log (LOGINFO, "ImGui using glsl 120");
       vertex_shader = vertex_shader_glsl_120;
       fragment_shader = fragment_shader_glsl_120;
       }
-    else if (mGlslVersion >= 410) {
-      vertex_shader = vertex_shader_glsl_410_core;
-      fragment_shader = fragment_shader_glsl_410_core;
-      }
-    else if (mGlslVersion == 300) {
+    else if (mGlslVersionNum == 300) {
+      cLog::log (LOGINFO, "GLSL ImGui using 300_es");
       vertex_shader = vertex_shader_glsl_300_es;
       fragment_shader = fragment_shader_glsl_300_es;
       }
+    else if (mGlslVersionNum >= 410) {
+      cLog::log (LOGINFO, "GLSL ImGui using 410_core");
+      vertex_shader = vertex_shader_glsl_410_core;
+      fragment_shader = fragment_shader_glsl_410_core;
+      }
     else {
+      cLog::log (LOGINFO, "GLSL ImGui using 130");
       vertex_shader = vertex_shader_glsl_130;
       fragment_shader = fragment_shader_glsl_130;
       }
@@ -898,7 +909,7 @@ private:
     glDisable (GL_STENCIL_TEST);
 
     #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_PRIMITIVE_RESTART
-      if (mGlVersion >= 310)
+      if (mGlVersionNum >= 310)
         glDisable (GL_PRIMITIVE_RESTART);
     #endif
 
@@ -945,7 +956,7 @@ private:
     glUniformMatrix4fv (gAttribLocationProjMtx, 1, GL_FALSE, &ortho_projection[0][0]);
 
     #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
-      if (mGlVersion >= 330)
+      if (mGlVersionNum >= 330)
         // We use combined texture/sampler state. Applications using GL 3.3 may set that otherwise.
         glBindSampler (0, 0);
     #endif
@@ -1076,9 +1087,9 @@ private:
   //}}}
 
   string mGlVersionString;
+  GLuint mGlVersionNum = 0;
   string mGlslVersionString;
-  GLuint mGlVersion = 0;
-  GLuint mGlslVersion = 0;
+  GLuint mGlslVersionNum = 0;
 
   GLuint gFontTexture = 0;
   GLuint gShaderHandle = 0;
