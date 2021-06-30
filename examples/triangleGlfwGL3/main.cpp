@@ -464,16 +464,16 @@ public:
   //}}}
 
   //{{{
+  void clear() {
+    glClearColor (0.45f, 0.55f, 0.6f, 1.f);
+    glClear (GL_COLOR_BUFFER_BIT);
+    }
+  //}}}
+  //{{{
   void newFrame() {
 
     if (!gShaderHandle)
       createDeviceObjects();
-    }
-  //}}}
-  //{{{
-  void clear() {
-    glClearColor (0.45f, 0.55f, 0.6f, 1.f);
-    glClear (GL_COLOR_BUFFER_BIT);
     }
   //}}}
   //{{{
@@ -1117,11 +1117,6 @@ public:
     link();
     }
   //}}}
-  //{{{
-  void use() {
-    glUseProgram (mId);
-    }
-  //}}}
 
   template<typename T> void setUniform (const string& name, T val);
   template<typename T> void setUniform (const string& name, T val1, T val2);
@@ -1150,6 +1145,12 @@ public:
   template<> void setUniform<float>(const string& name, float val1, float val2, float val3) {
     glUniform3f (glGetUniformLocation (mId, name.c_str()), val1, val2, val3);
     }
+
+  //{{{
+  void use() {
+    glUseProgram (mId);
+    }
+  //}}}
 
 private:
   //{{{
@@ -1186,12 +1187,12 @@ private:
   //{{{
   void compile() {
 
-    const char* vertexCode = mVertexCode.c_str();
+    auto vertexCode = mVertexCode.c_str();
     mVertexId = glCreateShader (GL_VERTEX_SHADER);
     glShaderSource (mVertexId, 1, &vertexCode, NULL);
     glCompileShader (mVertexId);
 
-    const char* fragmentCode = mFragmentCode.c_str();
+    auto fragmentCode = mFragmentCode.c_str();
     mFragmentId = glCreateShader (GL_FRAGMENT_SHADER);
     glShaderSource (mFragmentId, 1, &fragmentCode, NULL);
     glCompileShader (mFragmentId);
