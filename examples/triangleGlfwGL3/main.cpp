@@ -994,7 +994,6 @@ private:
     "  Out_Color = Frag_Color * texture(Texture, Frag_UV.st);"
     "  }"
     "\n";
-
   //}}}
   //{{{  shaders 120
   const GLchar* vertex_shader_glsl_120 =
@@ -1021,7 +1020,7 @@ private:
     "void main() {"
     "  gl_FragColor = Frag_Color * texture2D(Texture, Frag_UV.st);"
     "  }"
-    "  \n";
+    "\n";
   //}}}
   //{{{  shaders 300_es
   const GLchar* vertex_shader_glsl_300_es =
@@ -1222,9 +1221,8 @@ class cFileManager {
 public:
   cFileManager() {}
   ~cFileManager() {}
-  //{{{
-  static string read (const string& filename) {
 
+  static string read (const string& filename) {
     ifstream file;
     file.exceptions (ifstream::failbit | ifstream::badbit);
     stringstream file_stream;
@@ -1240,26 +1238,25 @@ public:
 
     return file_stream.str();
     }
-  //}}}
   };
 //}}}
 //{{{
 class cTriangle {
 public:
   cTriangle() {
-    glGenVertexArrays (1, &vao);
-    glBindVertexArray (vao);
-    cLog::log (LOGINFO, format ("vao {}", vao));
+    glGenVertexArrays (1, &mVao);
+    glBindVertexArray (mVao);
+    cLog::log (LOGINFO, format ("vao {}", mVao));
 
-    glGenBuffers (1, &vbo);
-    glBindBuffer (GL_ARRAY_BUFFER, vbo);
+    glGenBuffers (1, &mVbo);
+    glBindBuffer (GL_ARRAY_BUFFER, mVbo);
     glBufferData (GL_ARRAY_BUFFER, sizeof(kTriangleVertices), kTriangleVertices, GL_STATIC_DRAW);
-    cLog::log (LOGINFO, format ("vbo {}", vbo));
+    cLog::log (LOGINFO, format ("vbo {}", mVbo));
 
-    glGenBuffers (1, &ebo);
-    glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glGenBuffers (1, &mEbo);
+    glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, mEbo);
     glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof(kTriangleIndices), kTriangleIndices, GL_STATIC_DRAW);
-    cLog::log (LOGINFO, format ("ebo {}", ebo));
+    cLog::log (LOGINFO, format ("ebo {}", mEbo));
 
     glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray (0);
@@ -1272,29 +1269,30 @@ public:
     glBindVertexArray (0);
 
     //shader.init (cFileManager::read ("vert.txt"), cFileManager::read ("frag.txt"));
-    shader.init (kVertShader, kFragShader);
+    mShader.init (kVertShader, kFragShader);
     }
 
-  void setRotate (float angle) { shader.setUniform ("angle", angle); }
-  void setOffset (float offset[]) { shader.setUniform ("offset", offset[0], offset[1]); }
-  void setColor (float color[]) { shader.setUniform ("color", color[0], color[1], color[2]); }
+  void setRotate (float angle) { mShader.setUniform ("angle", angle); }
+  void setOffset (float offset[]) { mShader.setUniform ("offset", offset[0], offset[1]); }
+  void setColor (float color[]) { mShader.setUniform ("color", color[0], color[1], color[2]); }
 
   void draw() {
-    shader.use();
-    glBindVertexArray (vao);
+    mShader.use();
+    glBindVertexArray (mVao);
     glDrawElements (GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
     glBindVertexArray (0);
     }
 
 private:
+  //{{{  vertices
   const float kTriangleVertices[18] = { 0.0f,   0.25f, 0.0f,  1.0f, 0.0f, 0.0f, // vertex 1 red
                                         0.25f, -0.25f, 0.0f,  0.0f, 1.0f, 0.0f, // vertex 2 green
                                        -0.25f, -0.25f, 0.0f,  0.0f, 0.0f, 1.0f, // vertex 3 blue
                                       };
   const unsigned kTriangleIndices[3] = { 0, 1, 2 };
-
+  //}}}
   //{{{  shaders
-  const GLchar* kVertShader =
+  string kVertShader =
     "#version 330 core\n"
     "uniform float angle;"
     "uniform vec2 offset;"
@@ -1310,7 +1308,7 @@ private:
     "  }"
     "\n";
 
-  const GLchar* kFragShader =
+  string kFragShader =
     "#version 330 core\n"
     "uniform vec3 color;"
     "in vec3 vertexColor;"
@@ -1321,11 +1319,10 @@ private:
     "\n";
   //}}}
 
-  unsigned vbo;
-  unsigned vao;
-  unsigned ebo;
-
-  cShader shader;
+  unsigned mVao;
+  unsigned mVbo;
+  unsigned mEbo;
+  cShader mShader;
   };
 //}}}
 
