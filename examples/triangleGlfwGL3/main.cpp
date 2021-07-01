@@ -57,6 +57,8 @@
   #define GLFW_HAS_NEW_CURSORS   (0)
 #endif
 
+constexpr float kPi = 3.14159265f;
+
 // using namespace
 using namespace std;
 using namespace fmt;
@@ -1109,9 +1111,39 @@ private:
   };
 //}}}
 //{{{
+class cFileManager {
+public:
+  cFileManager() {}
+  ~cFileManager() {}
+
+  static string read (const string& filename) {
+    ifstream file;
+    file.exceptions (ifstream::failbit | ifstream::badbit);
+    stringstream file_stream;
+
+    try {
+      file.open (filename.c_str());
+      file_stream << file.rdbuf();
+      file.close();
+      }
+    catch (ifstream::failure e) {
+      cLog::log (LOGERROR, "Error reading Shader File");
+      }
+
+    return file_stream.str();
+    }
+  };
+//}}}
+//{{{
 class cShader {
 public:
   cShader() {}
+  //{{{
+  ~cShader() {
+    glDeleteShader (mId);
+    }
+  //}}}
+
   //{{{
   void init (const string& vertexCode, const string& fragmentCode) {
 
@@ -1157,22 +1189,133 @@ public:
     }
   //}}}
 
+  //{{{
+  void show (const string& tag) {
+
+    cLog::log (LOGINFO, format ("{} shader", tag));
+
+    // inputs
+    GLint numInputs;
+    glGetProgramInterfaceiv (mId, GL_PROGRAM_INPUT, GL_ACTIVE_RESOURCES, &numInputs);
+    cLog::log (LOGINFO, format ("- inputs {}", numInputs));
+
+    const GLenum inputProperties[] = { GL_NAME_LENGTH, GL_TYPE, GL_LOCATION };
+    for (int i = 0; i < numInputs; ++i) {
+      GLint results[3];
+      glGetProgramResourceiv (mId, GL_PROGRAM_INPUT, i,
+                              sizeof(inputProperties), inputProperties, sizeof(inputProperties), NULL, results);
+
+      GLint nameBufSize = results[0] + 1;
+      char* nameBuf = new char[nameBufSize];
+      glGetProgramResourceName (mId, GL_PROGRAM_INPUT, i, nameBufSize, NULL, nameBuf);
+
+      cLog::log (LOGINFO, format ("  - name:{:6} type:{:9} location:{}",
+                                  nameBuf, getTypeString (results[1]), results[2]));
+      delete[] nameBuf;
+      }
+
+    // outputs
+    GLint numOutputs;
+    glGetProgramInterfaceiv (mId, GL_PROGRAM_OUTPUT, GL_ACTIVE_RESOURCES, &numOutputs);
+    cLog::log (LOGINFO, format ("- outputs {}", numOutputs));
+
+    const GLenum outputProperties[] = { GL_NAME_LENGTH, GL_TYPE, GL_LOCATION };
+    for (int i = 0; i < numOutputs; ++i) {
+      GLint results[3];
+      glGetProgramResourceiv (mId, GL_PROGRAM_OUTPUT, i,
+                              sizeof(outputProperties), outputProperties, sizeof(outputProperties), NULL, results);
+
+      GLint nameBufSize = results[0] + 1;
+      char* nameBuf = new char[nameBufSize];
+      glGetProgramResourceName (mId, GL_PROGRAM_OUTPUT, i, nameBufSize, NULL, nameBuf);
+
+      cLog::log (LOGINFO, format ("  - name:{:6} type:{:9} location:{}",
+                                  nameBuf, getTypeString (results[1]), results[2]));
+      delete[] nameBuf;
+      }
+
+    // uniforms
+    GLint numUniforms = 0;
+    glGetProgramInterfaceiv (mId, GL_UNIFORM, GL_ACTIVE_RESOURCES, &numUniforms);
+    cLog::log (LOGINFO, format ("- uniforms {}", numUniforms));
+
+    const GLenum uniformProperties[] = { GL_NAME_LENGTH, GL_TYPE, GL_LOCATION, GL_BLOCK_INDEX };
+    for (int i = 0; i < numUniforms; ++i) {
+      GLint results[4];
+      glGetProgramResourceiv (mId, GL_UNIFORM, i,
+                              sizeof(inputProperties), uniformProperties, sizeof(inputProperties), NULL, results);
+      if (results[3] != -1)
+        continue; // Skip uniforms in blocks
+
+      GLint nameBufSize = results[0] + 1;
+      char* nameBuf = new char[nameBufSize];
+      glGetProgramResourceName (mId, GL_UNIFORM, i, nameBufSize, NULL, nameBuf);
+
+      cLog::log (LOGINFO, format ("  - name:{:6} type:{:9} location:{}",
+                                  nameBuf, getTypeString (results[1]), results[2]));
+      delete[] nameBuf;
+      }
+
+    }
+  //}}}
+
 private:
+  //{{{
+  string getTypeString (int typeNum) {
+
+    switch (typeNum) {
+      case GL_BYTE :          return "byte";
+      case GL_UNSIGNED_BYTE : return "ubyte";
+
+      case GL_SHORT :         return "short";
+      case GL_UNSIGNED_SHORT: return "ushort";
+
+      case GL_INT:            return "int";
+      case GL_UNSIGNED_INT:   return "uint";
+
+      case GL_FLOAT:          return "float";
+      case GL_DOUBLE:         return "double";
+
+      case GL_FLOAT_VEC2:     return "floatVec2";
+      case GL_FLOAT_VEC3:     return "floatVec3";
+      case GL_FLOAT_VEC4:     return "floatVc4";
+
+      case GL_INT_VEC2:       return "intVec2";
+      case GL_INT_VEC3:       return "intVec3";
+      case GL_INT_VEC4:       return "intVec4";
+
+      case GL_BOOL:           return "bool";
+      case GL_BOOL_VEC2:      return "boolVec2";
+      case GL_BOOL_VEC3:      return "boolVec3";
+      case GL_BOOL_VEC4:      return "boolVec4";
+
+      case GL_FLOAT_MAT2:     return "floatMat2";
+      case GL_FLOAT_MAT3:     return "floatMat3";
+      case GL_FLOAT_MAT4:     return "floatMat4";
+
+      default:                return format ("uknownType:{}", typeNum);
+      }
+  }
+  //}}}
+
   //{{{
   void checkCompileError() {
 
     int success;
-    char infoLog[1024];
     glGetShaderiv (mVertexId, GL_COMPILE_STATUS, &success);
+
     if (!success) {
+      char infoLog[1024];
       glGetShaderInfoLog (mVertexId, 1024, NULL, infoLog);
-      cLog::log (LOGERROR, "Error compiling Vertex Shader " + string(infoLog));
+      cLog::log (LOGERROR, format("Error compiling Vertex Shader {}", infoLog));
       }
 
     glGetShaderiv (mFragmentId, GL_COMPILE_STATUS, &success);
+
     if (!success) {
+      char infoLog[1024];
       glGetShaderInfoLog (mFragmentId, 1024, NULL, infoLog);
-      cLog::log (LOGERROR, "Error compiling Fragment Shader " + string(infoLog));
+      cLog::log (LOGERROR, format("Error compiling Fragment Shader {}", infoLog));
       }
     }
   //}}}
@@ -1180,11 +1323,12 @@ private:
   void checkLinkingError() {
 
     int success;
-    char infoLog[1024];
     glGetProgramiv (mId, GL_LINK_STATUS, &success);
+
     if (!success) {
+      char infoLog[1024];
       glGetProgramInfoLog (mId, 1024, NULL, infoLog);
-      cLog::log (LOGERROR, "Error Linking Shader Program " + string (infoLog));
+      cLog::log (LOGERROR, format ("Error Linking Shader Program {}", infoLog));
       }
     }
   //}}}
@@ -1228,30 +1372,6 @@ private:
   };
 //}}}
 //{{{
-class cFileManager {
-public:
-  cFileManager() {}
-  ~cFileManager() {}
-
-  static string read (const string& filename) {
-    ifstream file;
-    file.exceptions (ifstream::failbit | ifstream::badbit);
-    stringstream file_stream;
-
-    try {
-      file.open (filename.c_str());
-      file_stream << file.rdbuf();
-      file.close();
-      }
-    catch (ifstream::failure e) {
-      cLog::log (LOGERROR, "Error reading Shader File");
-      }
-
-    return file_stream.str();
-    }
-  };
-//}}}
-//{{{
 class cTriangle {
 public:
   cTriangle() {
@@ -1291,6 +1411,11 @@ public:
     glDrawElements (GL_TRIANGLES, sizeof(kIndices), GL_UNSIGNED_INT, 0);
     //glBindVertexArray (0);
     }
+  //{{{
+  void show() {
+    mShader.show (kTag);
+    }
+  //}}}
 
 private:
   inline static const string kTag ="traiangle";
@@ -1376,11 +1501,11 @@ public:
     //glBindVertexArray (0);
     }
 
-
-//GLubyte indices[] = {0,1,2, // first triangle (bottom left - top left - top right)
-//                     0,2,3}; // second triangle (bottom left - top right - bottom right)
-//glVertexPointer(3, GL_FLOAT, 0, vertices);
-//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, indices);
+  //{{{
+  void show() {
+    mShader.show (kTag);
+    }
+  //}}}
 
 private:
   inline static const string kTag ="rectangle";
@@ -1428,11 +1553,6 @@ private:
   cShader mShader;
   };
 //}}}
-
-constexpr float kPi = 3.14159265f;
-float angle = 0.0;
-float offset[] = {0.0, 0.0};
-float color[4] = { 1.0f,1.0f,1.0f,1.0f };
 
 //{{{
 void addLogo() {
@@ -1497,7 +1617,12 @@ int main (int, char **) {
     //}}}
 
   //cTriangle shape;
+  float angle = 0.0;
+  float offset[] = {0.0, 0.0};
+  float color[4] = { 1.0f,1.0f,1.0f,1.0f };
+
   cRectangle shape;
+  shape.show();
 
   while (platform.pollEvents()) {
     graphics.clear();
