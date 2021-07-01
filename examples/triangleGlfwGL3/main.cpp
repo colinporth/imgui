@@ -70,7 +70,7 @@ public:
 //{{{
 static bool init() {
 
-  cLog::log (LOGINFO, format ("GLFW version {}.{}", GLFW_VERSION_MAJOR, GLFW_VERSION_MINOR));
+  cLog::log (LOGINFO, format ("GLFW - version {}.{}", GLFW_VERSION_MAJOR, GLFW_VERSION_MINOR));
 
   glfwSetErrorCallback (errorCallback);
   if (!glfwInit())
@@ -405,13 +405,13 @@ public:
       mGlVersionNum = (GLuint)(major * 100 + minor * 10);
     #endif
 
-    cLog::log (LOGINFO, format ("OpenGL version {} parsed as {}", glVersion, mGlVersionNum));
+    cLog::log (LOGINFO, format ("OpenGL - version {} parsed as {}", glVersion, mGlVersionNum));
     string glslVersion = (const char*)glGetString (GL_SHADING_LANGUAGE_VERSION);
-    cLog::log (LOGINFO, format ("GLSL version {}", glslVersion));
-    string glRenderer = (const char*)glGetString (GL_RENDERER);
-    cLog::log (LOGINFO, format ("Renderer - {}", glRenderer));
+    cLog::log (LOGINFO, format ("GLSL - version {}", glslVersion));
     string glVendor = (const char*)glGetString (GL_VENDOR);
     cLog::log (LOGINFO, format ("Vendor - {}", glVendor));
+    string glRenderer = (const char*)glGetString (GL_RENDERER);
+    cLog::log (LOGINFO, format ("Renderer - {}", glRenderer));
 
     // Setup backend capabilities flags
     ImGuiIO& io = ImGui::GetIO();
@@ -425,31 +425,28 @@ public:
         }
     #endif
 
-    gHasClipOrigin = mGlVersionNum >= 450;
+    mHasClipOrigin = mGlVersionNum >= 450;
     #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_EXTENSIONS
       GLint num_extensions = 0;
       glGetIntegerv (GL_NUM_EXTENSIONS, &num_extensions);
       for (GLint i = 0; i < num_extensions; i++) {
         auto extension = (const char*)glGetStringi (GL_EXTENSIONS, i);
         if ((extension != NULL) && strcmp (extension, "GL_ARB_clip_control") == 0) {
-          gHasClipOrigin = true;
+          mHasClipOrigin = true;
           cLog::log (LOGINFO, "- openGL has GL_ARB_clip_control clipOrigin");
           }
         }
     #endif
 
     // glsl versionString, number
-    #if defined(IMGUI_IMPL_OPENGL_ES2)
-      mGlslVersionString = "#version 100\n";
-      mGlslVersionNum = 100;
-    #elif defined(IMGUI_IMPL_OPENGL_ES3)
+    #if defined(IMGUI_IMPL_OPENGL_ES3)
       mGlslVersionString = "#version 300 es\n";
       mGlslVersionNum = 300;
     #else
       mGlslVersionString = "#version 130\n";
       mGlslVersionNum = 130;
     #endif
-    cLog::log (LOGINFO, format ("GLSL using {}", mGlslVersionNum));
+    cLog::log (LOGINFO, format ("GLSL - using {}", mGlslVersionNum));
 
     // Make an arbitrary GL call (we don't actually need the result)
     GLint current_texture;
@@ -797,23 +794,18 @@ private:
     // Select shaders matching our GLSL versions
     const GLchar* vertex_shader = NULL;
     const GLchar* fragment_shader = NULL;
-    if (mGlslVersionNum < 130) {
-      cLog::log (LOGINFO, "ImGui using glsl 120");
-      vertex_shader = vertex_shader_glsl_120;
-      fragment_shader = fragment_shader_glsl_120;
-      }
-    else if (mGlslVersionNum == 300) {
-      cLog::log (LOGINFO, "GLSL ImGui using 300_es");
-      vertex_shader = vertex_shader_glsl_300_es;
-      fragment_shader = fragment_shader_glsl_300_es;
+    if (mGlslVersionNum == 300) {
+      cLog::log (LOGINFO, "GLSL - ImGui using 300 ES");
+      vertex_shader = vertex_shader_glsl_300_ES;
+      fragment_shader = fragment_shader_glsl_300_ES;
       }
     else if (mGlslVersionNum >= 410) {
-      cLog::log (LOGINFO, "GLSL ImGui using 410_core");
-      vertex_shader = vertex_shader_glsl_410_core;
-      fragment_shader = fragment_shader_glsl_410_core;
+      cLog::log (LOGINFO, "GLSL - ImGui using 410 Core");
+      vertex_shader = vertex_shader_glsl_410_Core;
+      fragment_shader = fragment_shader_glsl_410_Core;
       }
     else {
-      cLog::log (LOGINFO, "GLSL ImGui using 130");
+      cLog::log (LOGINFO, "GLSL - ImGui using 130");
       vertex_shader = vertex_shader_glsl_130;
       fragment_shader = fragment_shader_glsl_130;
       }
@@ -922,7 +914,7 @@ private:
       // Support for GL 4.5 rarely used glClipControl(GL_UPPER_LEFT)
     #if defined(GL_CLIP_ORIGIN)
       bool clip_origin_lower_left = true;
-      if (gHasClipOrigin) {
+      if (mHasClipOrigin) {
         GLenum current_clip_origin = 0;
         glGetIntegerv(GL_CLIP_ORIGIN, (GLint*)&current_clip_origin);
         if (current_clip_origin == GL_UPPER_LEFT)
@@ -1008,40 +1000,11 @@ private:
     "  }"
     "\n";
   //}}}
-  //{{{  shaders 120
-  const GLchar* vertex_shader_glsl_120 =
-    "uniform mat4 ProjMtx;"
-    "attribute vec2 Position;"
-    "attribute vec2 UV;"
-    "attribute vec4 Color;"
-    "varying vec2 Frag_UV;"
-    "varying vec4 Frag_Color;"
-    "void main() {"
-    "  Frag_UV = UV;"
-    "  Frag_Color = Color;"
-    "  gl_Position = ProjMtx * vec4(Position.xy,0,1);"
-    "  }"
-    "\n";
-
-  const GLchar* fragment_shader_glsl_120 =
-    "#ifdef GL_ES\n"
-    "  precision mediump float;\n"
-    "#endif\n"
-    "uniform sampler2D Texture;"
-    "varying vec2 Frag_UV;"
-    "varying vec4 Frag_Color;"
-    "void main() {"
-    "  gl_FragColor = Frag_Color * texture2D(Texture, Frag_UV.st);"
-    "  }"
-    "\n";
-  //}}}
-  //{{{  shaders 300_es
-  const GLchar* vertex_shader_glsl_300_es =
-    "precision mediump float;"
-    "layout (location = 0) in vec2 Position;"
+  //{{{  shaders 410 Core
+  const GLchar* vertex_shader_glsl_410_Core =
+    "uniform mat4 ProjMtx;" "layout (location = 0) in vec2 Position;"
     "layout (location = 1) in vec2 UV;"
     "layout (location = 2) in vec4 Color;"
-    "uniform mat4 ProjMtx;"
     "out vec2 Frag_UV;"
     "out vec4 Frag_Color;"
     "void main() {"
@@ -1051,8 +1014,7 @@ private:
     "  }"
     "\n";
 
-  const GLchar* fragment_shader_glsl_300_es =
-    "precision mediump float;"
+  const GLchar* fragment_shader_glsl_410_Core =
     "uniform sampler2D Texture;"
     "in vec2 Frag_UV;"
     "in vec4 Frag_Color;"
@@ -1062,12 +1024,13 @@ private:
     "  }"
     "\n";
   //}}}
-  //{{{  shaders 410_core
-  const GLchar* vertex_shader_glsl_410_core =
+  //{{{  shaders 300 ES
+  const GLchar* vertex_shader_glsl_300_ES =
+    "precision mediump float;"
+    "uniform mat4 ProjMtx;"
     "layout (location = 0) in vec2 Position;"
     "layout (location = 1) in vec2 UV;"
     "layout (location = 2) in vec4 Color;"
-    "uniform mat4 ProjMtx;"
     "out vec2 Frag_UV;"
     "out vec4 Frag_Color;"
     "void main() {"
@@ -1077,10 +1040,11 @@ private:
     "  }"
     "\n";
 
-  const GLchar* fragment_shader_glsl_410_core =
+  const GLchar* fragment_shader_glsl_300_ES =
+    "precision mediump float;"
+    "uniform sampler2D Texture;"
     "in vec2 Frag_UV;"
     "in vec4 Frag_Color;"
-    "uniform sampler2D Texture;"
     "layout (location = 0) out vec4 Out_Color;"
     "void main() {"
     "  Out_Color = Frag_Color * texture(Texture, Frag_UV.st);"
@@ -1107,7 +1071,7 @@ private:
   unsigned int gVboHandle = 0;
   unsigned int gElementsHandle = 0;
 
-  bool gHasClipOrigin = false;
+  bool mHasClipOrigin = false;
   };
 //}}}
 //{{{
@@ -1197,7 +1161,7 @@ public:
     // inputs
     GLint numInputs;
     glGetProgramInterfaceiv (mId, GL_PROGRAM_INPUT, GL_ACTIVE_RESOURCES, &numInputs);
-    cLog::log (LOGINFO, format ("- inputs {}", numInputs));
+    cLog::log (LOGINFO, format ("- inputs:{}", numInputs));
 
     const GLenum inputProperties[] = { GL_NAME_LENGTH, GL_TYPE, GL_LOCATION };
     for (int i = 0; i < numInputs; ++i) {
@@ -1217,7 +1181,7 @@ public:
     // outputs
     GLint numOutputs;
     glGetProgramInterfaceiv (mId, GL_PROGRAM_OUTPUT, GL_ACTIVE_RESOURCES, &numOutputs);
-    cLog::log (LOGINFO, format ("- outputs {}", numOutputs));
+    cLog::log (LOGINFO, format ("- outputs:{}", numOutputs));
 
     const GLenum outputProperties[] = { GL_NAME_LENGTH, GL_TYPE, GL_LOCATION };
     for (int i = 0; i < numOutputs; ++i) {
@@ -1237,7 +1201,7 @@ public:
     // uniforms
     GLint numUniforms = 0;
     glGetProgramInterfaceiv (mId, GL_UNIFORM, GL_ACTIVE_RESOURCES, &numUniforms);
-    cLog::log (LOGINFO, format ("- uniforms {}", numUniforms));
+    cLog::log (LOGINFO, format ("- uniforms:{}", numUniforms));
 
     const GLenum uniformProperties[] = { GL_NAME_LENGTH, GL_TYPE, GL_LOCATION, GL_BLOCK_INDEX };
     for (int i = 0; i < numUniforms; ++i) {
@@ -1278,7 +1242,7 @@ private:
 
       case GL_FLOAT_VEC2:     return "floatVec2";
       case GL_FLOAT_VEC3:     return "floatVec3";
-      case GL_FLOAT_VEC4:     return "floatVc4";
+      case GL_FLOAT_VEC4:     return "floatVec4";
 
       case GL_INT_VEC2:       return "intVec2";
       case GL_INT_VEC3:       return "intVec3";
@@ -1396,8 +1360,6 @@ public:
     glEnableVertexAttribArray (1);
 
     mShader.init (kVertShader, kFragShader);
-    //glBindBuffer (GL_ARRAY_BUFFER, 0);
-    //glBindVertexArray (0);
     //shader.init (cFileManager::read ("vert.txt"), cFileManager::read ("frag.txt"));
     }
 
@@ -1408,8 +1370,7 @@ public:
   void draw() {
     mShader.use();
     glBindVertexArray (mVao);
-    glDrawElements (GL_TRIANGLES, sizeof(kIndices), GL_UNSIGNED_INT, 0);
-    //glBindVertexArray (0);
+    glDrawElements (GL_TRIANGLES, sizeof(kIndices), GL_UNSIGNED_BYTE, 0);
     }
   //{{{
   void show() {
@@ -1419,13 +1380,15 @@ public:
 
 private:
   inline static const string kTag ="traiangle";
-  //{{{  vertices
-  const float kVertices[18] = { 0.0f,   0.25f, 0.0f,  1.0f, 0.0f, 0.0f, // vertex 1 red
-                                0.25f, -0.25f, 0.0f,  0.0f, 1.0f, 0.0f, // vertex 2 green
-                               -0.25f, -0.25f, 0.0f,  0.0f, 0.0f, 1.0f, // vertex 3 blue
+
+  // vertices
+  const float kVertices[18] = { 0.f,  1.f, 0.f,  1.f, 0.f, 0.f, // midTop   vertex 0 red
+                                1.f, -1.f, 0.f,  0.f, 1.f, 0.f, // botRight vertex 1 green
+                               -1.f, -1.f, 0.f,  0.f, 0.f, 1.f, // botLeft  vertex 2 blue
                               };
-  const unsigned kIndices[3] = { 0, 1, 2 };
-  //}}}
+  const uint8_t kIndices[3] = { 0, 1, 2 }; //    0
+                                           //   / \
+                                           //  2   1
   //{{{  shaders
   string kVertShader =
     "#version 330 core\n"
@@ -1485,8 +1448,6 @@ public:
     glEnableVertexAttribArray (1);
 
     mShader.init (kVertShader, kFragShader);
-    //glBindBuffer (GL_ARRAY_BUFFER, 0);
-    //glBindVertexArray (0);
     //shader.init (cFileManager::read ("vert.txt"), cFileManager::read ("frag.txt"));
     }
 
@@ -1497,8 +1458,7 @@ public:
   void draw() {
     mShader.use();
     glBindVertexArray (mVao);
-    glDrawElements (GL_TRIANGLES, sizeof(kIndices), GL_UNSIGNED_INT, 0);
-    //glBindVertexArray (0);
+    glDrawElements (GL_TRIANGLES, sizeof(kIndices), GL_UNSIGNED_BYTE, 0);
     }
 
   //{{{
@@ -1508,17 +1468,17 @@ public:
   //}}}
 
 private:
-  inline static const string kTag ="rectangle";
-  //{{{  vertices
-  const float kVertices[24] = { -1.f, -1.f, 0.0f,  1.f, 0.f, 0.f, // bl vertex 1 red
-                                -1.f,  1.f, 0.0f,  0.f, 1.f, 0.f, // br vertex 2 green
-                                 1.f,  1.f, 0.0f,  0.f, 0.f, 1.f, // tr vertex 3 blue
-                                 1.f, -1.f, 0.0f,  1.f, 1.f, 1.f, // tl vertex 4 white
+  inline static const string kTag = "rectangle";
+
+  // vertices
+  const float kVertices[24] = { -1.f, -1.f, 0.0f,  1.f, 0.f, 0.f, // bl vertex 0 red
+                                -1.f,  1.f, 0.0f,  0.f, 1.f, 0.f, // br vertex 1 green
+                                 1.f,  1.f, 0.0f,  0.f, 0.f, 1.f, // tr vertex 2 blue
+                                 1.f, -1.f, 0.0f,  1.f, 1.f, 1.f, // tl vertex 3 white
                               };
-  const unsigned kIndices[6] = { 0,1,2, 0,2,3 };  // 3-2      2    3-2
-                                                  // | |     /|    |/
-                                                  // 0-1    0-1    0
-  //}}}
+  const uint8_t kIndices[6] = { 0,1,2, 0,2,3 }; // 3-2      2    3-2
+                                                // | |     /|    |/
+                                                // 0-1    0-1    0
   //{{{  shaders
   string kVertShader =
     "#version 330 core\n"
@@ -1633,7 +1593,7 @@ int main (int, char **) {
     shape.draw();
 
     // gui
-    ImGui::Begin ("Triangle");
+    ImGui::Begin ("shape");
     ImGui::SliderFloat2 ("offset", offset, -1.0, 1.0);
     shape.setOffset (offset);
     ImGui::SliderFloat ("angle", &angle, 0, 2.0f * kPi);
