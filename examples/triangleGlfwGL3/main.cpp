@@ -1341,23 +1341,27 @@ class cShape {
 public:
   cShape (const string& tag, unsigned numIndices, const string& vertShader, const string& fragShader)
       : mTag(tag), mNumIndices(numIndices) {
+
+    mShader.init (vertShader, fragShader);
+    //shader.init (cFileManager::read ("vert.txt"), cFileManager::read ("frag.txt"));
+
     glGenVertexArrays (1, &mVao);
     glBindVertexArray (mVao);
     cLog::log (LOGINFO, format ("{} vao:{}", mTag, mVao));
 
     glGenBuffers (1, &mVbo);
     glBindBuffer (GL_ARRAY_BUFFER, mVbo);
+    cLog::log (LOGINFO, format ("{} vbo:{}", mTag, mVbo));
+
     glGenBuffers (1, &mEbo);
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, mEbo);
+    cLog::log (LOGINFO, format ("{} ebo:{}", mTag, mEbo));
 
     glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray (0);
 
     glVertexAttribPointer (1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray (1);
-
-    mShader.init (vertShader, fragShader);
-    //shader.init (cFileManager::read ("vert.txt"), cFileManager::read ("frag.txt"));
     }
 
   void setRotate (float angle)    { mShader.setUniform ("angle", angle); }
@@ -1372,13 +1376,14 @@ public:
     glDrawElements (GL_TRIANGLES, mNumIndices, GL_UNSIGNED_BYTE, 0);
     }
 
-protected:
+private:
   const string mTag;
+  const unsigned mNumIndices;
+  cShader mShader;
+
   unsigned mVao;
   unsigned mVbo;
   unsigned mEbo;
-  unsigned mNumIndices;
-  cShader mShader;
   };
 //}}}
 //{{{
@@ -1386,15 +1391,8 @@ class cTriangle : public cShape {
 public:
   cTriangle() : cShape ("triangle", sizeof(kIndices), kVertShader, kFragShader) {
     glBufferData (GL_ARRAY_BUFFER, sizeof(kVertices), kVertices, GL_STATIC_DRAW);
-    cLog::log (LOGINFO, format ("{} vbo:{}", mTag, mVbo));
-
     glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof(kIndices), kIndices, GL_STATIC_DRAW);
-    cLog::log (LOGINFO, format ("{} ebo:{}", mTag, mEbo));
     }
-
-  void setRotate (float angle)    { mShader.setUniform ("angle", angle); }
-  void setOffset (float offset[]) { mShader.setUniform ("offset", offset[0], offset[1]); }
-  void setColor (float color[])   { mShader.setUniform ("color", color[0], color[1], color[2]); }
 
 private:
   // vertices
@@ -1405,7 +1403,7 @@ private:
   inline static const uint8_t kIndices[3] = { 0, 1, 2 }; //    0
                                                          //   / \
                                                          //  2   1
-  //{{{  shaders
+  // shaders
   inline static const string kVertShader =
     "#version 330 core\n"
     "uniform float angle;"
@@ -1431,7 +1429,6 @@ private:
     "  FragColor = vec4 (color * vertexColor, 1.0);"
     "  }"
     "\n";
-  //}}}
   };
 //}}}
 //{{{
@@ -1439,15 +1436,8 @@ class cRectangle : public cShape  {
 public:
   cRectangle() : cShape("rectangle", sizeof(kIndices), kVertShader, kFragShader) {
     glBufferData (GL_ARRAY_BUFFER, sizeof(kVertices), kVertices, GL_STATIC_DRAW);
-    cLog::log (LOGINFO, format ("{} vbo:{}", mTag, mVbo));
-
     glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof(kIndices), kIndices, GL_STATIC_DRAW);
-    cLog::log (LOGINFO, format ("{} ebo:{}", mTag, mEbo));
     }
-
-  void setRotate (float angle)    { mShader.setUniform ("angle", angle); }
-  void setOffset (float offset[]) { mShader.setUniform ("offset", offset[0], offset[1]); }
-  void setColor (float color[])   { mShader.setUniform ("color", color[0], color[1], color[2]); }
 
 private:
   // vertices
@@ -1458,7 +1448,7 @@ private:
                               };
   inline static const uint8_t kIndices[6] = { 0,1,2, 0,2,3 }; // 3-2      2    3-2
                                                               // | |     /|    |/
-                                                             // 0-1    0-1    0
+                                                              // 0-1    0-1    0
   // shaders
   inline static const string kVertShader =
     "#version 330 core\n"
@@ -1526,7 +1516,7 @@ void addLogo() {
 int main (int numArgs, char* args[]) {
   (void)numArgs;
   (void)args;
-  
+
   cLog::init (LOGINFO);
   cLog::log (LOGNOTICE, "openGL ImGui testbed");
 
