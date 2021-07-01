@@ -1,4 +1,4 @@
-// main.cpp
+// main.cpp - openGL ImGui testbed
 //{{{  includes
 #define _CRT_SECURE_NO_WARNINGS
 
@@ -1335,23 +1335,20 @@ private:
   string mFragmentCode;
   };
 //}}}
+
 //{{{
-class cTriangle {
+class cShape {
 public:
-  cTriangle() {
+  cShape (const string& tag, unsigned numIndices, const string& vertShader, const string& fragShader)
+      : mTag(tag), mNumIndices(numIndices) {
     glGenVertexArrays (1, &mVao);
     glBindVertexArray (mVao);
-    cLog::log (LOGINFO, format ("{} vao:{}", kTag, mVao));
+    cLog::log (LOGINFO, format ("{} vao:{}", mTag, mVao));
 
     glGenBuffers (1, &mVbo);
     glBindBuffer (GL_ARRAY_BUFFER, mVbo);
-    glBufferData (GL_ARRAY_BUFFER, sizeof(kVertices), kVertices, GL_STATIC_DRAW);
-    cLog::log (LOGINFO, format ("{} vbo:{}", kTag, mVbo));
-
     glGenBuffers (1, &mEbo);
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, mEbo);
-    glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof(kIndices), kIndices, GL_STATIC_DRAW);
-    cLog::log (LOGINFO, format ("{} ebo:{}", kTag, mEbo));
 
     glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray (0);
@@ -1359,7 +1356,7 @@ public:
     glVertexAttribPointer (1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray (1);
 
-    mShader.init (kVertShader, kFragShader);
+    mShader.init (vertShader, fragShader);
     //shader.init (cFileManager::read ("vert.txt"), cFileManager::read ("frag.txt"));
     }
 
@@ -1367,30 +1364,49 @@ public:
   void setOffset (float offset[]) { mShader.setUniform ("offset", offset[0], offset[1]); }
   void setColor (float color[])   { mShader.setUniform ("color", color[0], color[1], color[2]); }
 
+  void show() { mShader.show (mTag); }
+
   void draw() {
     mShader.use();
     glBindVertexArray (mVao);
-    glDrawElements (GL_TRIANGLES, sizeof(kIndices), GL_UNSIGNED_BYTE, 0);
+    glDrawElements (GL_TRIANGLES, mNumIndices, GL_UNSIGNED_BYTE, 0);
     }
-  //{{{
-  void show() {
-    mShader.show (kTag);
+
+protected:
+  const string mTag;
+  unsigned mVao;
+  unsigned mVbo;
+  unsigned mEbo;
+  unsigned mNumIndices;
+  cShader mShader;
+  };
+//}}}
+//{{{
+class cTriangle : public cShape {
+public:
+  cTriangle() : cShape ("triangle", sizeof(kIndices), kVertShader, kFragShader) {
+    glBufferData (GL_ARRAY_BUFFER, sizeof(kVertices), kVertices, GL_STATIC_DRAW);
+    cLog::log (LOGINFO, format ("{} vbo:{}", mTag, mVbo));
+
+    glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof(kIndices), kIndices, GL_STATIC_DRAW);
+    cLog::log (LOGINFO, format ("{} ebo:{}", mTag, mEbo));
     }
-  //}}}
+
+  void setRotate (float angle)    { mShader.setUniform ("angle", angle); }
+  void setOffset (float offset[]) { mShader.setUniform ("offset", offset[0], offset[1]); }
+  void setColor (float color[])   { mShader.setUniform ("color", color[0], color[1], color[2]); }
 
 private:
-  inline static const string kTag ="traiangle";
-
   // vertices
   const float kVertices[18] = { 0.f,  1.f, 0.f,  1.f, 0.f, 0.f, // midTop   vertex 0 red
                                 1.f, -1.f, 0.f,  0.f, 1.f, 0.f, // botRight vertex 1 green
                                -1.f, -1.f, 0.f,  0.f, 0.f, 1.f, // botLeft  vertex 2 blue
                               };
-  const uint8_t kIndices[3] = { 0, 1, 2 }; //    0
-                                           //   / \
-                                           //  2   1
+  inline static const uint8_t kIndices[3] = { 0, 1, 2 }; //    0
+                                                         //   / \
+                                                         //  2   1
   //{{{  shaders
-  string kVertShader =
+  inline static const string kVertShader =
     "#version 330 core\n"
     "uniform float angle;"
     "uniform vec2 offset;"
@@ -1406,7 +1422,7 @@ private:
     "  }"
     "\n";
 
-  string kFragShader =
+  inline static const string kFragShader =
     "#version 330 core\n"
     "uniform vec3 color;"
     "in vec3 vertexColor;"
@@ -1416,71 +1432,35 @@ private:
     "  }"
     "\n";
   //}}}
-
-  unsigned mVao;
-  unsigned mVbo;
-  unsigned mEbo;
-  cShader mShader;
   };
 //}}}
 //{{{
-class cRectangle {
+class cRectangle : public cShape  {
 public:
-  cRectangle() {
-    glGenVertexArrays (1, &mVao);
-    glBindVertexArray (mVao);
-    cLog::log (LOGINFO, format ("{} vao:{}", kTag, mVao));
-
-    glGenBuffers (1, &mVbo);
-    glBindBuffer (GL_ARRAY_BUFFER, mVbo);
+  cRectangle() : cShape("rectangle", sizeof(kIndices), kVertShader, kFragShader) {
     glBufferData (GL_ARRAY_BUFFER, sizeof(kVertices), kVertices, GL_STATIC_DRAW);
-    cLog::log (LOGINFO, format ("{} vbo:{}", kTag, mVbo));
+    cLog::log (LOGINFO, format ("{} vbo:{}", mTag, mVbo));
 
-    glGenBuffers (1, &mEbo);
-    glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, mEbo);
     glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof(kIndices), kIndices, GL_STATIC_DRAW);
-    cLog::log (LOGINFO, format ("{} ebo:{}", kTag, mEbo));
-
-    glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray (0);
-
-    glVertexAttribPointer (1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray (1);
-
-    mShader.init (kVertShader, kFragShader);
-    //shader.init (cFileManager::read ("vert.txt"), cFileManager::read ("frag.txt"));
+    cLog::log (LOGINFO, format ("{} ebo:{}", mTag, mEbo));
     }
 
   void setRotate (float angle)    { mShader.setUniform ("angle", angle); }
   void setOffset (float offset[]) { mShader.setUniform ("offset", offset[0], offset[1]); }
   void setColor (float color[])   { mShader.setUniform ("color", color[0], color[1], color[2]); }
 
-  void draw() {
-    mShader.use();
-    glBindVertexArray (mVao);
-    glDrawElements (GL_TRIANGLES, sizeof(kIndices), GL_UNSIGNED_BYTE, 0);
-    }
-
-  //{{{
-  void show() {
-    mShader.show (kTag);
-    }
-  //}}}
-
 private:
-  inline static const string kTag = "rectangle";
-
   // vertices
   const float kVertices[24] = { -1.f, -1.f, 0.0f,  1.f, 0.f, 0.f, // bl vertex 0 red
                                 -1.f,  1.f, 0.0f,  0.f, 1.f, 0.f, // br vertex 1 green
                                  1.f,  1.f, 0.0f,  0.f, 0.f, 1.f, // tr vertex 2 blue
                                  1.f, -1.f, 0.0f,  1.f, 1.f, 1.f, // tl vertex 3 white
                               };
-  const uint8_t kIndices[6] = { 0,1,2, 0,2,3 }; // 3-2      2    3-2
-                                                // | |     /|    |/
-                                                // 0-1    0-1    0
-  //{{{  shaders
-  string kVertShader =
+  inline static const uint8_t kIndices[6] = { 0,1,2, 0,2,3 }; // 3-2      2    3-2
+                                                              // | |     /|    |/
+                                                             // 0-1    0-1    0
+  // shaders
+  inline static const string kVertShader =
     "#version 330 core\n"
     "uniform float angle;"
     "uniform vec2 offset;"
@@ -1496,7 +1476,7 @@ private:
     "  }"
     "\n";
 
-  string kFragShader =
+  inline static const string kFragShader =
     "#version 330 core\n"
     "uniform vec3 color;"
     "in vec3 vertexColor;"
@@ -1505,12 +1485,6 @@ private:
     "  FragColor = vec4 (color * vertexColor, 1.0);"
     "  }"
     "\n";
-  //}}}
-
-  unsigned mVao;
-  unsigned mVbo;
-  unsigned mEbo;
-  cShader mShader;
   };
 //}}}
 
@@ -1549,10 +1523,12 @@ void addLogo() {
   }
 //}}}
 
-int main (int, char **) {
-
+int main (int numArgs, char* args[]) {
+  (void)numArgs;
+  (void)args;
+  
   cLog::init (LOGINFO);
-  cLog::log (LOGNOTICE, "triangle openGL");
+  cLog::log (LOGNOTICE, "openGL ImGui testbed");
 
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
@@ -1578,11 +1554,11 @@ int main (int, char **) {
 
   //cTriangle shape;
   float angle = 0.0;
-  float offset[] = {0.0, 0.0};
-  float color[4] = { 1.0f,1.0f,1.0f,1.0f };
+  float offset[] = { 0.f, 0.f } ;
+  float color[4] = { 1.f,1.f,1.f, 1.f };
 
-  cRectangle shape;
-  shape.show();
+  cShape* shape = new cRectangle;
+  shape->show();
 
   while (platform.pollEvents()) {
     graphics.clear();
@@ -1590,17 +1566,18 @@ int main (int, char **) {
     platform.newFrame();
     ImGui::NewFrame();
 
-    shape.draw();
+    shape->draw();
 
     // gui
     ImGui::Begin ("shape");
     ImGui::SliderFloat2 ("offset", offset, -1.0, 1.0);
-    shape.setOffset (offset);
     ImGui::SliderFloat ("angle", &angle, 0, 2.0f * kPi);
-    shape.setRotate (angle);
     ImGui::ColorEdit3 ("color", color);
-    shape.setColor (color);
     ImGui::End();
+
+    shape->setOffset (offset);
+    shape->setRotate (angle);
+    shape->setColor (color);
 
     // logo
     ImGui::Begin ("logo");
@@ -1615,6 +1592,7 @@ int main (int, char **) {
     }
 
   // shutdown
+  delete shape;
   graphics.shutdown();
   platform.shutdown();
   ImGui::DestroyContext();
