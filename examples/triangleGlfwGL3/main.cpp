@@ -1257,17 +1257,17 @@ public:
   cTriangle() {
     glGenVertexArrays (1, &mVao);
     glBindVertexArray (mVao);
-    cLog::log (LOGINFO, format ("vao {}", mVao));
+    cLog::log (LOGINFO, format ("{} vao:{}", kTag, mVao));
 
     glGenBuffers (1, &mVbo);
     glBindBuffer (GL_ARRAY_BUFFER, mVbo);
-    glBufferData (GL_ARRAY_BUFFER, sizeof(kTriangleVertices), kTriangleVertices, GL_STATIC_DRAW);
-    cLog::log (LOGINFO, format ("vbo {}", mVbo));
+    glBufferData (GL_ARRAY_BUFFER, sizeof(kVertices), kVertices, GL_STATIC_DRAW);
+    cLog::log (LOGINFO, format ("{} vbo:{}", kTag, mVbo));
 
     glGenBuffers (1, &mEbo);
     glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, mEbo);
-    glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof(kTriangleIndices), kTriangleIndices, GL_STATIC_DRAW);
-    cLog::log (LOGINFO, format ("ebo {}", mEbo));
+    glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof(kIndices), kIndices, GL_STATIC_DRAW);
+    cLog::log (LOGINFO, format ("{} ebo:{}", kTag, mEbo));
 
     glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray (0);
@@ -1275,32 +1275,124 @@ public:
     glVertexAttribPointer (1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray (1);
 
-    glBindBuffer (GL_ARRAY_BUFFER, 0);
-
-    glBindVertexArray (0);
-
-    //shader.init (cFileManager::read ("vert.txt"), cFileManager::read ("frag.txt"));
     mShader.init (kVertShader, kFragShader);
+    //glBindBuffer (GL_ARRAY_BUFFER, 0);
+    //glBindVertexArray (0);
+    //shader.init (cFileManager::read ("vert.txt"), cFileManager::read ("frag.txt"));
     }
 
-  void setRotate (float angle) { mShader.setUniform ("angle", angle); }
+  void setRotate (float angle)    { mShader.setUniform ("angle", angle); }
   void setOffset (float offset[]) { mShader.setUniform ("offset", offset[0], offset[1]); }
-  void setColor (float color[]) { mShader.setUniform ("color", color[0], color[1], color[2]); }
+  void setColor (float color[])   { mShader.setUniform ("color", color[0], color[1], color[2]); }
 
   void draw() {
     mShader.use();
     glBindVertexArray (mVao);
-    glDrawElements (GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
-    glBindVertexArray (0);
+    glDrawElements (GL_TRIANGLES, sizeof(kIndices), GL_UNSIGNED_INT, 0);
+    //glBindVertexArray (0);
     }
 
 private:
+  inline static const string kTag ="traiangle";
   //{{{  vertices
-  const float kTriangleVertices[18] = { 0.0f,   0.25f, 0.0f,  1.0f, 0.0f, 0.0f, // vertex 1 red
-                                        0.25f, -0.25f, 0.0f,  0.0f, 1.0f, 0.0f, // vertex 2 green
-                                       -0.25f, -0.25f, 0.0f,  0.0f, 0.0f, 1.0f, // vertex 3 blue
-                                      };
-  const unsigned kTriangleIndices[3] = { 0, 1, 2 };
+  const float kVertices[18] = { 0.0f,   0.25f, 0.0f,  1.0f, 0.0f, 0.0f, // vertex 1 red
+                                0.25f, -0.25f, 0.0f,  0.0f, 1.0f, 0.0f, // vertex 2 green
+                               -0.25f, -0.25f, 0.0f,  0.0f, 0.0f, 1.0f, // vertex 3 blue
+                              };
+  const unsigned kIndices[3] = { 0, 1, 2 };
+  //}}}
+  //{{{  shaders
+  string kVertShader =
+    "#version 330 core\n"
+    "uniform float angle;"
+    "uniform vec2 offset;"
+    "layout (location = 0) in vec3 pos;"
+    "layout (location = 1) in vec3 color;"
+    "out vec3 vertexColor;\n"
+    "void main() {"
+    "  vec2 rotated_pos;"
+    "  rotated_pos.x = offset.x + (pos.x * cos(angle)) - (pos.y * sin(angle));"
+    "  rotated_pos.y = offset.y + (pos.x * sin(angle)) + (pos.y * cos(angle));"
+    "  gl_Position = vec4 (rotated_pos.x, rotated_pos.y, pos.z, 1.0);"
+    "  vertexColor = color;"
+    "  }"
+    "\n";
+
+  string kFragShader =
+    "#version 330 core\n"
+    "uniform vec3 color;"
+    "in vec3 vertexColor;"
+    "out vec4 FragColor;"
+    "void main() {"
+    "  FragColor = vec4 (color * vertexColor, 1.0);"
+    "  }"
+    "\n";
+  //}}}
+
+  unsigned mVao;
+  unsigned mVbo;
+  unsigned mEbo;
+  cShader mShader;
+  };
+//}}}
+//{{{
+class cRectangle {
+public:
+  cRectangle() {
+    glGenVertexArrays (1, &mVao);
+    glBindVertexArray (mVao);
+    cLog::log (LOGINFO, format ("{} vao:{}", kTag, mVao));
+
+    glGenBuffers (1, &mVbo);
+    glBindBuffer (GL_ARRAY_BUFFER, mVbo);
+    glBufferData (GL_ARRAY_BUFFER, sizeof(kVertices), kVertices, GL_STATIC_DRAW);
+    cLog::log (LOGINFO, format ("{} vbo:{}", kTag, mVbo));
+
+    glGenBuffers (1, &mEbo);
+    glBindBuffer (GL_ELEMENT_ARRAY_BUFFER, mEbo);
+    glBufferData (GL_ELEMENT_ARRAY_BUFFER, sizeof(kIndices), kIndices, GL_STATIC_DRAW);
+    cLog::log (LOGINFO, format ("{} ebo:{}", kTag, mEbo));
+
+    glVertexAttribPointer (0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray (0);
+
+    glVertexAttribPointer (1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray (1);
+
+    mShader.init (kVertShader, kFragShader);
+    //glBindBuffer (GL_ARRAY_BUFFER, 0);
+    //glBindVertexArray (0);
+    //shader.init (cFileManager::read ("vert.txt"), cFileManager::read ("frag.txt"));
+    }
+
+  void setRotate (float angle)    { mShader.setUniform ("angle", angle); }
+  void setOffset (float offset[]) { mShader.setUniform ("offset", offset[0], offset[1]); }
+  void setColor (float color[])   { mShader.setUniform ("color", color[0], color[1], color[2]); }
+
+  void draw() {
+    mShader.use();
+    glBindVertexArray (mVao);
+    glDrawElements (GL_TRIANGLES, sizeof(kIndices), GL_UNSIGNED_INT, 0);
+    //glBindVertexArray (0);
+    }
+
+
+//GLubyte indices[] = {0,1,2, // first triangle (bottom left - top left - top right)
+//                     0,2,3}; // second triangle (bottom left - top right - bottom right)
+//glVertexPointer(3, GL_FLOAT, 0, vertices);
+//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, indices);
+
+private:
+  inline static const string kTag ="rectangle";
+  //{{{  vertices
+  const float kVertices[24] = { -1.f, -1.f, 0.0f,  1.f, 0.f, 0.f, // bl vertex 1 red
+                                -1.f,  1.f, 0.0f,  0.f, 1.f, 0.f, // br vertex 2 green
+                                 1.f,  1.f, 0.0f,  0.f, 0.f, 1.f, // tr vertex 3 blue
+                                 1.f, -1.f, 0.0f,  1.f, 1.f, 1.f, // tl vertex 4 white
+                              };
+  const unsigned kIndices[6] = { 0,1,2, 0,2,3 };  // 3-2      2    3-2
+                                                  // | |     /|    |/
+                                                  // 0-1    0-1    0
   //}}}
   //{{{  shaders
   string kVertShader =
@@ -1404,7 +1496,8 @@ int main (int, char **) {
     }
     //}}}
 
-  cTriangle triangle;
+  //cTriangle shape;
+  cRectangle shape;
 
   while (platform.pollEvents()) {
     graphics.clear();
@@ -1412,16 +1505,16 @@ int main (int, char **) {
     platform.newFrame();
     ImGui::NewFrame();
 
-    triangle.draw();
+    shape.draw();
 
     // gui
     ImGui::Begin ("Triangle");
     ImGui::SliderFloat2 ("offset", offset, -1.0, 1.0);
-    triangle.setOffset (offset);
+    shape.setOffset (offset);
     ImGui::SliderFloat ("angle", &angle, 0, 2.0f * kPi);
-    triangle.setRotate (angle);
+    shape.setRotate (angle);
     ImGui::ColorEdit3 ("color", color);
-    triangle.setColor (color);
+    shape.setColor (color);
     ImGui::End();
 
     // logo
