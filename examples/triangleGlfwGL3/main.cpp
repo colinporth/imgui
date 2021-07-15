@@ -916,7 +916,7 @@ private:
       bool clip_origin_lower_left = true;
       if (mHasClipOrigin) {
         GLenum current_clip_origin = 0;
-        glGetIntegerv(GL_CLIP_ORIGIN, (GLint*)&current_clip_origin);
+        glGetIntegerv (GL_CLIP_ORIGIN, (GLint*)&current_clip_origin);
         if (current_clip_origin == GL_UPPER_LEFT)
           clip_origin_lower_left = false;
         }
@@ -978,78 +978,95 @@ private:
   //{{{  shaders 130
   const GLchar* vertex_shader_glsl_130 =
     "uniform mat4 ProjMtx;"
+
     "in vec2 Position;"
     "in vec2 UV;"
     "in vec4 Color;"
+
     "out vec2 Frag_UV;"
     "out vec4 Frag_Color;"
+
     "void main() {"
     "  Frag_UV = UV;"
     "  Frag_Color = Color;"
     "  gl_Position = ProjMtx * vec4(Position.xy,0,1);"
-    "  }"
-    "\n";
+    "  }";
+
 
   const GLchar* fragment_shader_glsl_130 =
     "uniform sampler2D Texture;"
+
     "in vec2 Frag_UV;"
     "in vec4 Frag_Color;"
+
     "out vec4 Out_Color;"
+
     "void main() {"
     "  Out_Color = Frag_Color * texture(Texture, Frag_UV.st);"
-    "  }"
-    "\n";
+    "  }";
   //}}}
   //{{{  shaders 410 Core
   const GLchar* vertex_shader_glsl_410_Core =
     "uniform mat4 ProjMtx;" "layout (location = 0) in vec2 Position;"
+
     "layout (location = 1) in vec2 UV;"
     "layout (location = 2) in vec4 Color;"
+
     "out vec2 Frag_UV;"
     "out vec4 Frag_Color;"
+
     "void main() {"
     "  Frag_UV = UV;"
     "  Frag_Color = Color;"
     "  gl_Position = ProjMtx * vec4(Position.xy,0,1);"
-    "  }"
-    "\n";
+    "  }";
+
 
   const GLchar* fragment_shader_glsl_410_Core =
     "uniform sampler2D Texture;"
+
     "in vec2 Frag_UV;"
     "in vec4 Frag_Color;"
+
     "layout (location = 0) out vec4 Out_Color;"
+
     "void main() {"
     "  Out_Color = Frag_Color * texture(Texture, Frag_UV.st);"
-    "  }"
-    "\n";
+    "  }";
   //}}}
   //{{{  shaders 300 ES
   const GLchar* vertex_shader_glsl_300_ES =
     "precision mediump float;"
+
     "uniform mat4 ProjMtx;"
+
     "layout (location = 0) in vec2 Position;"
     "layout (location = 1) in vec2 UV;"
     "layout (location = 2) in vec4 Color;"
+
     "out vec2 Frag_UV;"
     "out vec4 Frag_Color;"
+
     "void main() {"
     "  Frag_UV = UV;"
     "  Frag_Color = Color;"
     "  gl_Position = ProjMtx * vec4(Position.xy,0,1);"
-    "  }"
-    "\n";
+    "  }";
+
 
   const GLchar* fragment_shader_glsl_300_ES =
     "precision mediump float;"
+
     "uniform sampler2D Texture;"
+
     "in vec2 Frag_UV;"
     "in vec4 Frag_Color;"
+
     "layout (location = 0) out vec4 Out_Color;"
+
     "void main() {"
     "  Out_Color = Frag_Color * texture(Texture, Frag_UV.st);"
-    "  }"
-    "\n";
+    "  }";
   //}}}
 
   string mGlVersionString;
@@ -1441,11 +1458,11 @@ public:
 
 private:
   // vertices
-  const float kVertices[24] = { -1.f, -1.f, 0.0f,  1.f, 0.f, 0.f, // bl vertex 0 red
-                                -1.f,  1.f, 0.0f,  0.f, 1.f, 0.f, // br vertex 1 green
-                                 1.f,  1.f, 0.0f,  0.f, 0.f, 1.f, // tr vertex 2 blue
-                                 1.f, -1.f, 0.0f,  1.f, 1.f, 1.f, // tl vertex 3 white
-                              };
+  inline static const float kVertices[24] = { -1.f, -1.f, 0.0f,  1.f, 0.f, 0.f, // bl vertex 0 red
+                                              -1.f,  1.f, 0.0f,  0.f, 1.f, 0.f, // br vertex 1 green
+                                               1.f,  1.f, 0.0f,  0.f, 0.f, 1.f, // tr vertex 2 blue
+                                               1.f, -1.f, 0.0f,  1.f, 1.f, 1.f, // tl vertex 3 white
+                                            };
   inline static const uint8_t kIndices[6] = { 0,1,2, 0,2,3 }; // 3-2      2    3-2
                                                               // | |     /|    |/
                                                               // 0-1    0-1    0
